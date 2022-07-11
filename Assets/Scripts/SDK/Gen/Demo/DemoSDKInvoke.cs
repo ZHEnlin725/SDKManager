@@ -1,4 +1,8 @@
-﻿namespace SDK.Core {
+﻿// ********************************
+//        自动生成请勿修改
+//DateTime:2022-07-11 17:40:18
+//********************************
+namespace SDK.Core {
     
     
     public partial class SDKManager {

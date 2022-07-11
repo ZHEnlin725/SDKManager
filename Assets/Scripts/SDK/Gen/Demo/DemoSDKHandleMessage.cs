@@ -1,4 +1,8 @@
-﻿namespace SDK.Impl {
+﻿// ********************************
+//        自动生成请勿修改
+//DateTime:2022-07-11 17:53:07
+//********************************
+namespace SDK.Impl {
     
     
     public partial class DemoSDK {

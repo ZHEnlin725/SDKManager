@@ -72,6 +72,11 @@ namespace SDK.Core.Editor
         {
             var provider = CodeDomProvider.CreateProvider("c#");
             var codeNamespace = new CodeNamespace("SDK.Core");
+            codeNamespace.Comments.Add(new CodeCommentStatement($@"********************************
+        自动生成请勿修改
+DateTime:{DateTime.Now:yyyy-MM-dd HH:mm:ss}
+********************************"));
+
             var classname = classType.Name;
             var codeTypeDeclaration = new CodeTypeDeclaration("SDKManager") {IsPartial = true};
 
@@ -88,7 +93,7 @@ namespace SDK.Core.Editor
             codeMemberMethod.Statements.Add(
                 new CodeMethodInvokeExpression(
                     new CodeThisReferenceExpression(),
-                    RegisterSDKProxyMethod, 
+                    RegisterSDKProxyMethod,
                     new CodePrimitiveExpression(sdkAttribute.id),
                     new CodeObjectCreateExpression(classType)));
 
@@ -102,12 +107,12 @@ namespace SDK.Core.Editor
                 var parameterInfos = methodInfo.GetParameters();
                 var invokeGetSDKProxy = new CodeMethodInvokeExpression(
                     new CodeThisReferenceExpression(),
-                    GetSDKProxyMethod, 
+                    GetSDKProxyMethod,
                     new CodePrimitiveExpression(sdkAttribute.id)
                 );
                 var methodInvokeExpression = new CodeMethodInvokeExpression(
                     new CodeCastExpression(classType,
-                    invokeGetSDKProxy), 
+                        invokeGetSDKProxy),
                     methodInfo.Name);
                 foreach (var parameterInfo in parameterInfos)
                 {
@@ -135,6 +140,10 @@ namespace SDK.Core.Editor
         {
             var provider = CodeDomProvider.CreateProvider("c#");
             var codeNamespace = new CodeNamespace(classType.Namespace);
+            codeNamespace.Comments.Add(new CodeCommentStatement($@"********************************
+        自动生成请勿修改
+DateTime:{DateTime.Now:yyyy-MM-dd HH:mm:ss}
+********************************"));
 
             var classname = classType.Name;
 
@@ -149,27 +158,31 @@ namespace SDK.Core.Editor
             codeMemberMethod.Attributes = MemberAttributes.Assembly | MemberAttributes.Override;
 
             var methodIdDict = new Dictionary<int, List<MethodInfo>>();
-            methodInfoList.Sort((x, y)
-                => x.GetCustomAttribute<SDKCallbackAttribute>().messageId -
-                   y.GetCustomAttribute<SDKCallbackAttribute>().messageId);
             foreach (var methodInfo in methodInfoList)
             {
-                var messageId = methodInfo.GetCustomAttribute<SDKCallbackAttribute>().messageId;
-                if (!methodIdDict.TryGetValue(messageId,
-                    out var list)) methodIdDict.Add(messageId, list = new List<MethodInfo>());
-                list.Add(methodInfo);
+                var sdkCallbackAttributes = methodInfo.GetCustomAttributes<SDKCallbackAttribute>();
+                foreach (var sdkCallbackAttribute in sdkCallbackAttributes)
+                {
+                    var messageId = sdkCallbackAttribute.messageId;
+                    if (!methodIdDict.TryGetValue(messageId,
+                        out var list)) methodIdDict.Add(messageId, list = new List<MethodInfo>());
+                    list.Add(methodInfo);
+                }
             }
+
+            var keys = methodIdDict.Keys.ToList();
+            keys.Sort((x, y) => x - y);
 
             CodeConditionStatement lastCodeConditionStatement = null;
 
-            foreach (var pair in methodIdDict)
+            foreach (var key in keys)
             {
                 var codeConditionStatement = new CodeConditionStatement(
                     new CodeBinaryOperatorExpression(
                         new CodeArgumentReferenceExpression(arg_messageId),
                         CodeBinaryOperatorType.IdentityEquality,
-                        new CodePrimitiveExpression(pair.Key)));
-                foreach (var methodInfo in pair.Value)
+                        new CodePrimitiveExpression(key)));
+                foreach (var methodInfo in methodIdDict[key])
                 {
                     var handMessageInvoke =
                         new CodeMethodInvokeExpression(new CodeThisReferenceExpression(), methodInfo.Name);

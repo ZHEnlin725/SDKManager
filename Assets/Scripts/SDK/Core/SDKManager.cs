@@ -35,7 +35,7 @@ namespace SDK.Core
         private const string SDKIdKey = "sdkId";
         private const string MessageKey = "message";
 
-        private const string MessageIdKey = "messageId";
+        private const string MessageIdKey = "id";
         private const string MessageContentKey = "content";
 
         private readonly Dictionary<int, SDKProxyBase> _sdkDict = new Dictionary<int, SDKProxyBase>();

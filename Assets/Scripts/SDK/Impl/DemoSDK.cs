@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace SDK.Impl
 {
-    [SDK(1, name = "Demo")]
+    [SDK(1, "Demo")]
     public partial class DemoSDK : SDKProxyBase
     {
         private const int OnInitCallback = 1;

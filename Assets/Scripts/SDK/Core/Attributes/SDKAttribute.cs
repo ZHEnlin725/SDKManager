@@ -11,13 +11,19 @@ namespace SDK.Core.Attributes
         /// <summary>
         /// 用来区分SDK
         /// </summary>
-        public int id;
-        
-        public string name;
+        public readonly int id;
+
+        public readonly string name;
 
         public SDKAttribute(int id)
         {
             this.id = id;
+        }
+
+        public SDKAttribute(int id, string name)
+        {
+            this.id = id;
+            this.name = name;
         }
     }
 }

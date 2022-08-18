@@ -43,6 +43,21 @@ namespace SDK.Core.Editor
             AssetDatabase.Refresh();
         }
 
+        public static void GenerateSDKProperty()
+        {
+            EnsureGeneratedScriptsFolder();
+            var assembly = Assembly.GetAssembly(typeof(SDKAttribute));
+            var exportedTypes = assembly.GetExportedTypes();
+
+            var types = exportedTypes.Where(o =>
+                AttributeFilter<SDKAttribute>(Attribute.GetCustomAttributes(o))).ToArray();
+            if (Duplicated(types)) return;
+            foreach (var type in types)
+                GenerateSDKProperty(type);
+
+            AssetDatabase.Refresh();
+        }
+
         public static void GenerateSDKHandleMessage()
         {
             EnsureGeneratedScriptsFolder();
@@ -66,6 +81,58 @@ namespace SDK.Core.Editor
             }
 
             AssetDatabase.Refresh();
+        }
+
+        private static void GenerateSDKProperty(Type classType)
+        {
+            var provider = CodeDomProvider.CreateProvider("c#");
+            var codeNamespace = new CodeNamespace("SDK.Core");
+            codeNamespace.Comments.Add(new CodeCommentStatement($@"********************************
+        自动生成请勿修改
+DateTime:{DateTime.Now:yyyy-MM-dd HH:mm:ss}
+********************************"));
+            var classname = classType.Name;
+            var codeTypeDeclaration = new CodeTypeDeclaration("SDKManager") {IsPartial = true};
+
+            var codeMemberProperty = new CodeMemberProperty
+                {Type = new CodeTypeReference(classType), Attributes = MemberAttributes.Public | MemberAttributes.Final};
+
+            var sdkAttribute = classType.GetCustomAttribute<SDKAttribute>();
+            var name = string.IsNullOrEmpty(sdkAttribute?.name) ? classname : sdkAttribute.name;
+            codeMemberProperty.Name = name;
+            var localVarName = "sdkProxy";
+            codeMemberProperty.GetStatements.Add(
+                new CodeVariableDeclarationStatement(new CodeTypeReference(typeof(SDKProxyBase)), localVarName,
+                    new CodeMethodInvokeExpression(new CodeThisReferenceExpression(), GetSDKProxyMethod,
+                        new CodeSnippetExpression(sdkAttribute.id.ToString()))));
+
+            var localVarRefExpression = new CodeVariableReferenceExpression(localVarName);
+
+            var codeConditionStatement = new CodeConditionStatement(
+                new CodeBinaryOperatorExpression(
+                    localVarRefExpression,
+                    CodeBinaryOperatorType.IdentityEquality, new CodeSnippetExpression("null")));
+            codeMemberProperty.GetStatements.Add(codeConditionStatement);
+
+            codeConditionStatement.TrueStatements.Add(new CodeAssignStatement(localVarRefExpression,
+                new CodeObjectCreateExpression(classType)));
+
+            codeConditionStatement.TrueStatements.Add(new CodeMethodInvokeExpression(new CodeThisReferenceExpression(),
+                RegisterSDKProxyMethod, new CodeSnippetExpression(sdkAttribute.id.ToString()), localVarRefExpression));
+
+            codeMemberProperty.GetStatements.Add(
+                new CodeMethodReturnStatement(new CodeCastExpression(classType,
+                    localVarRefExpression)));
+
+            codeTypeDeclaration.Members.Add(codeMemberProperty);
+
+            codeNamespace.Types.Add(codeTypeDeclaration);
+            var folderPath = Path.Combine(GeneratedScriptsFolder, name);
+            if (!Directory.Exists(folderPath)) Directory.CreateDirectory(folderPath);
+            var scriptPath = Path.Combine(folderPath, $"{classname}Property.cs");
+            if (File.Exists(scriptPath)) File.Delete(scriptPath);
+            using (var writer = new StreamWriter(scriptPath, false, Encoding.UTF8))
+                provider.GenerateCodeFromNamespace(codeNamespace, writer, null);
         }
 
         private static void GenerateSDKInvoke(Type classType, List<MethodInfo> methodInfoList)

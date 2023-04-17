@@ -56,7 +56,7 @@ namespace SDK.Core
          *        "content":{}|[]|""
          *     }
          * }
-         * 外部调用 UnitySendMessage("SDKManager","Dispatcher",[序列化好的json串])
+         * 外部调用 UnitySendMessage("SDKManager","Dispatch",[序列化好的json串])
          */
         public void Dispatch(string json)
         {
